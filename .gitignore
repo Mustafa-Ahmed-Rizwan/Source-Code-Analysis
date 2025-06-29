@@ -1,0 +1,65 @@
+# Ignore environment variable files
+.env
+.env.*
+
+# Byte-compiled / optimized / DLL files (Python)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# VS Code settings
+.vscode/
+
+# macOS files
+.DS_Store
+
+# System files
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Local database
+*.sqlite3
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Node.js (if using)
+node_modules/
+npm-debug.log*
+
+# Java (if using)
+*.class
+*.jar
+*.war
+*.ear
+target/
+
+# JetBrains IDEs (PyCharm, IntelliJ)
+.idea/
+
+# Others
+*.bak
+*.tmp

@@ -1,0 +1,35 @@
+/* Custom styles to complement Tailwind */
+#chat-container {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+#chat-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#chat-container::-webkit-scrollbar-track {
+    background: #f7fafc;
+}
+
+#chat-container::-webkit-scrollbar-thumb {
+    background-color: #cbd5e0;
+    border-radius: 4px;
+}
+
+.message {
+    margin-bottom: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+}
+
+.user-message {
+    background-color: #dbeafe;
+    margin-left: 2rem;
+    text-align: right;
+}
+
+.bot-message {
+    background-color: #edf2f7;
+    margin-right: 2rem;
+}
