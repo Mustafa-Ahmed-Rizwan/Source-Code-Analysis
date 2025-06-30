@@ -3,12 +3,14 @@ import re
 import shutil
 import uuid
 import logging
+import ast
 from git import Repo
 from langchain_community.document_loaders.generic import GenericLoader
 from langchain_community.document_loaders.parsers.language.language_parser import LanguageParser
 from langchain.text_splitter import Language
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.documents import Document  # Add this import at the top
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -64,3 +66,50 @@ def text_splitter(documents):
 def load_embedding():
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     return embeddings
+
+def function_class_chunker(documents, max_chunk_size=1800, overlap=200):
+    """
+    Splits Python code into function/class-level chunks with metadata.
+    If a chunk is too large, further splits it using character-based splitting.
+    """
+    chunks = []
+    for doc in documents:
+        code = doc.page_content if hasattr(doc, "page_content") else doc
+        file_path = doc.metadata.get("source", "unknown") if hasattr(doc, "metadata") else "unknown"
+        try:
+            tree = ast.parse(code)
+            for node in tree.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    start_line = node.lineno - 1
+                    end_line = getattr(node, 'end_lineno', None)
+                    if end_line is None:
+                        # Fallback for Python <3.8
+                        end_line = node.body[-1].lineno if node.body else node.lineno
+                    lines = code.splitlines()
+                    chunk_code = "\n".join(lines[start_line:end_line])
+                    metadata = {
+                        "type": type(node).__name__,
+                        "name": getattr(node, "name", ""),
+                        "file": file_path,
+                        "start_line": start_line + 1,
+                        "end_line": end_line
+                    }
+                    # Hybrid: further split if too large
+                    if len(chunk_code) > max_chunk_size:
+                        for i in range(0, len(chunk_code), max_chunk_size - overlap):
+                            sub_chunk = chunk_code[i:i + max_chunk_size]
+                            sub_metadata = metadata.copy()
+                            sub_metadata["split"] = f"{i//(max_chunk_size - overlap) + 1}"
+                            chunks.append({"content": sub_chunk, "metadata": sub_metadata})
+                    else:
+                        chunks.append({"content": chunk_code, "metadata": metadata})
+        except Exception as e:
+            logger.warning(f"AST parsing failed for {file_path}: {e}. Falling back to character split.")
+            # Fallback: character-based splitting
+            for i in range(0, len(code), max_chunk_size - overlap):
+                chunk_code = code[i:i + max_chunk_size]
+                metadata = {"type": "char_split", "file": file_path, "split": f"{i//(max_chunk_size - overlap) + 1}"}
+                chunks.append({"content": chunk_code, "metadata": metadata})
+    logger.info(f"Created {len(chunks)} function/class-level (hybrid) chunks")
+    # Convert dicts to LangChain Document objects
+    return [Document(page_content=chunk["content"], metadata=chunk["metadata"]) for chunk in chunks]

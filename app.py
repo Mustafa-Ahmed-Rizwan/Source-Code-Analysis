@@ -10,7 +10,7 @@ from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
-from src.helper import load_embedding, repo_ingestion, load_repo, text_splitter
+from src.helper import load_embedding, repo_ingestion, load_repo, function_class_chunker  # <-- change here
 import stat  # Add this import at the top if not already present
 
 app = Flask(__name__)
@@ -89,7 +89,7 @@ def initialize_vector_db(repo_url=None, repo_path=None):
                 logger.info(f"Removed existing index at {db_path}")
             if repo_path:
                 documents = load_repo(repo_path)
-                text_chunks = text_splitter(documents)
+                text_chunks = function_class_chunker(documents)  # <-- change here
                 vectordb = FAISS.from_documents(documents=text_chunks, embedding=embeddings)
                 # Persist the FAISS DB to disk
                 os.makedirs(os.path.dirname(db_path), exist_ok=True)
