@@ -63,3 +63,7 @@ target/
 # Others
 *.bak
 *.tmp
+
+# Ignore db and username folders
+db/
+username/
