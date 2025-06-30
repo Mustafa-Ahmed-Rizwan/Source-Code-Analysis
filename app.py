@@ -11,6 +11,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
 from src.helper import load_embedding, repo_ingestion, load_repo, text_splitter
+import stat  # Add this import at the top if not already present
 
 app = Flask(__name__)
 
@@ -148,23 +149,44 @@ def gitRepo():
         logger.error("QA chain not initialized after successful vector DB initialization")
     return jsonify({"response": init_result["message"]})
 
+def remove_readonly(func, path, excinfo):
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
 @app.route("/get", methods=["POST"])
 def chat():
     global qa, current_repo_hash
     msg = request.form["msg"]
-    if msg == "clear":
-        os.system("rm -rf repo")
-        if os.path.exists(persist_directory):
-            shutil.rmtree(persist_directory)
+    if msg == "clear_repo":
+        # Remove vector DB index
+        if current_repo_hash and os.path.exists(os.path.join(persist_directory, current_repo_hash)):
+            shutil.rmtree(os.path.join(persist_directory, current_repo_hash), onerror=remove_readonly)
+            logger.info(f"Removed index for repository with hash {current_repo_hash}")
+        # Remove cloned repo directory
+        import glob
+        repo_dirs = glob.glob(f"*/{current_repo_hash}")
+        for repo_dir in repo_dirs:
+            if os.path.exists(repo_dir):
+                shutil.rmtree(repo_dir, onerror=remove_readonly)
+                logger.info(f"Removed repository at {repo_dir}")
         qa = None
+        cleared_repo = current_repo_hash
         current_repo_hash = None
-        return jsonify({"response": "Repository and vector DB cleared."})
+        return jsonify({"response": f"Repository '{cleared_repo}' and its vector DB cleared successfully.", "type": "repo"})
+    if msg == "clear_chat":
+        if qa:
+            # Reset the memory for the current QA chain
+            qa.memory.clear()
+            logger.info("Cleared chat history for current repo.")
+            return jsonify({"response": "Chat history cleared for this repository.", "type": "chat"})
+        else:
+            return jsonify({"response": "No chat history to clear.", "type": "chat"})
     if not qa:
         logger.error("QA chain is None when processing chat request")
-        return jsonify({"response": "Vector DB not initialized. Please ingest a repository first."})
+        return jsonify({"response": "Vector DB not initialized. Please ingest a repository first.", "type": "error"})
     logger.info("Processing chat request with message: %s for repo hash %s", msg, current_repo_hash)
     result = qa(msg)
-    return jsonify({"response": result["answer"]})
+    return jsonify({"response": result["answer"], "type": "answer"})
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=8080, debug=True)

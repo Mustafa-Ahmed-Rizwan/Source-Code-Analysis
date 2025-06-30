@@ -33,3 +33,24 @@
     background-color: #edf2f7;
     margin-right: 2rem;
 }
+
+#clear-repo-btn,
+#clear-chat-btn {
+    min-width: 100px;
+    margin-left: 0.5rem;
+}
+
+#chat-message {
+    min-height: 1.5rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+    font-weight: 500;
+}
+
+.text-green-500 {
+    color: #16a34a;
+}
+
+.text-red-500 {
+    color: #dc2626;
+}

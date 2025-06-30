@@ -5,7 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatSection = document.getElementById('chat-section');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
-    const clearBtn = document.getElementById('clear-btn');
+    const clearRepoBtn = document.getElementById('clear-repo-btn');
+    const clearChatBtn = document.getElementById('clear-chat-btn');
     const chatContainer = document.getElementById('chat-container');
     const chatMessage = document.getElementById('chat-message');
 
@@ -96,24 +97,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Handle clear button
-    clearBtn.addEventListener('click', async () => {
+    // Handle clear repo button
+    clearRepoBtn.addEventListener('click', async () => {
         try {
             const response = await fetch('/get', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'msg=clear'
+                body: 'msg=clear_repo'
             });
             const data = await response.json();
             chatMessage.textContent = data.response;
             chatMessage.classList.add('text-green-500');
             chatContainer.innerHTML = '';
-            chatSection.classList.add('hidden');
+            // Do NOT hide chatSection or reset repo input
+            // Optionally, set isInitialized = false if you want to block chat until new repo is ingested
             isInitialized = false;
-            repoUrlInput.value = '';
-            repoMessage.textContent = '';
         } catch (error) {
-            chatMessage.textContent = 'Error: Failed to clear repository.';
+            chatMessage.textContent = 'Error: Failed to clear repository and index.';
+            chatMessage.classList.add('text-red-500');
+        }
+    });
+
+    // Handle clear chat button
+    clearChatBtn.addEventListener('click', async () => {
+        try {
+            const response = await fetch('/get', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'msg=clear_chat'
+            });
+            const data = await response.json();
+            chatMessage.textContent = data.response;
+            chatMessage.classList.add('text-green-500');
+            chatContainer.innerHTML = '';
+            // Keep chatSection and repo input as is
+        } catch (error) {
+            chatMessage.textContent = 'Error: Failed to clear chat history.';
             chatMessage.classList.add('text-red-500');
         }
     });
