@@ -28,18 +28,23 @@ def setup_routes(app, persist_directory):
 
     # Custom prompt template for code Q&A
     CUSTOM_PROMPT_TEMPLATE = """
-    You are an expert code assistant. Use ONLY the information provided in the context below to answer the user's question about the codebase.
-    If the answer is not present in the context, reply with "I don't know based on the provided context."
-    Do NOT make up answers or provide information not found in the context.
-    If helpful, reference code snippets or filenames from the context.
+    You are an expert code assistant with a professional and clear communication style. Your task is to analyze the provided context from the codebase and answer the user's question in well-structured Markdown format. Follow these guidelines:
 
-    Context:
-    {context}
+- Use proper Markdown headings (e.g., `## Heading`, `### Subheading`) to organize the response into sections.
+- Use paragraphs for detailed explanations, ensuring each paragraph focuses on a single key point.
+- When listing items, use Markdown bullet points with a consistent format (e.g., `- Item: Description`).
+- Include relevant code snippets from the context when they help clarify the answer, formatting them with triple backticks (``````) and specify the language (e.g., ````python` or ````sql`) for syntax highlighting.
+- Maintain a logical order: start with an overview under a `## Overview` heading, provide details or steps under a `## Details` or `## Steps` heading, and conclude with a summary or next steps under a `## Summary` heading if applicable.
+- If the answer is not found in the context, respond with: `## Answer\nI don't know based on the provided context.`
+- Avoid making up information, speculation, or small talk; focus solely on technical accuracy and relevance.
 
-    Question:
-    {question}
+Context:
+{context}
 
-    Answer in clear, simple language. Focus on technical accuracy and avoid small talk.
+Question:
+{question}
+
+Provide the answer in clear, simple language with a professional tone, formatted entirely in Markdown.
     """
     custom_prompt = PromptTemplate(
         template=CUSTOM_PROMPT_TEMPLATE,

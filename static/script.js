@@ -83,9 +83,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: `msg=${encodeURIComponent(message)}`
             });
             const data = await response.json();
+
+            // Improved botDiv creation for modern formatting
             const botDiv = document.createElement('div');
             botDiv.className = 'message bot-message';
-            botDiv.textContent = data.response;
+            try {
+                const markdown = marked.parse(data.response, { gfm: true, breaks: true });
+                botDiv.innerHTML = markdown;
+                // Ensure all code blocks have the correct class
+                botDiv.querySelectorAll('pre').forEach(pre => {
+                    pre.classList.add('code-snippet');
+                    const code = pre.querySelector('code');
+                    if (code) code.style.backgroundColor = 'transparent';
+                });
+            } catch (e) {
+                const para = document.createElement('p');
+                para.className = 'paragraph';
+                para.textContent = data.response;
+                botDiv.appendChild(para);
+            }
             chatContainer.appendChild(botDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         } catch (error) {

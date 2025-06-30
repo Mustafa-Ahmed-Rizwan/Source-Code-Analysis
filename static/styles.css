@@ -1,7 +1,27 @@
 /* Custom styles to complement Tailwind */
+body {
+    background: #f5f7fa;
+}
+
+#repo-section,
+#chat-section {
+    background: #f9fafb;
+    border-radius: 1rem;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e5e7eb;
+}
+
 #chat-container {
+    max-height: 24rem;
+    overflow-y: auto;
+    padding: 1.5rem;
+    background-color: #f3f4f6;
+    /* Tailwind's bg-gray-100 */
+    border-radius: 1rem;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e0 #f7fafc;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
+    border: none;
 }
 
 #chat-container::-webkit-scrollbar {
@@ -18,26 +38,101 @@
 }
 
 .message {
-    margin-bottom: 1rem;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    background: #fff;
+    font-size: 1.05rem;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    transition: box-shadow 0.2s;
+    border: 1px solid #e5e7eb;
 }
 
 .user-message {
-    background-color: #dbeafe;
-    margin-left: 2rem;
+    background: linear-gradient(90deg, #e0e7ff 60%, #f9fafb 100%);
+    margin-left: 4rem;
     text-align: right;
+    border-right: 4px solid #6366f1;
 }
 
 .bot-message {
-    background-color: #edf2f7;
-    margin-right: 2rem;
+    background: linear-gradient(90deg, #f0fdf4 60%, #f9fafb 100%);
+    margin-right: 4rem;
+    border-left: 4px solid #10b981;
+    box-shadow: 0 2px 12px rgba(16, 185, 129, 0.06);
 }
 
-#clear-repo-btn,
-#clear-chat-btn {
-    min-width: 100px;
-    margin-left: 0.5rem;
+.code-snippet {
+    background-color: #000 !important;
+    /* Force black background */
+    color: #d1d5db !important;
+    /* Light gray text */
+    padding: 1rem;
+    border-radius: 0.5rem;
+    font-family: 'Fira Mono', 'Consolas', monospace;
+    white-space: pre-wrap;
+    margin-bottom: 1rem;
+    border: 1px solid #4b5563;
+}
+
+.code-snippet::before {
+    color: #9ca3af !important;
+    /* Subtle gray label */
+    display: none;
+    /* Remove the "Code" label to avoid confusion */
+}
+
+pre code {
+    background-color: transparent !important;
+    /* Ensure no background on code inside pre */
+    color: #d1d5db !important;
+    /* Match text color */
+}
+
+.paragraph {
+    margin-bottom: 1rem;
+    line-height: 1.7;
+    color: #22223b;
+}
+
+.bullet-point {
+    margin-left: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #475569;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+pre {
+    background-color: #23272f;
+    color: #e0e7ef;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    font-family: 'Fira Mono', 'Consolas', monospace;
+    white-space: pre-wrap;
+    margin-bottom: 1rem;
+    border: 1px solid #334155;
+}
+
+code {
+    background-color: #f1f5f9;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.3rem;
+    color: #1e293b;
 }
 
 #chat-message {
@@ -53,4 +148,37 @@
 
 .text-red-500 {
     color: #dc2626;
+}
+
+/* Buttons */
+#send-btn,
+#clear-repo-btn,
+#clear-chat-btn,
+#ingest-btn {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+#send-btn {
+    background: linear-gradient(90deg, #6366f1 60%, #60a5fa 100%);
+    border: none;
+}
+
+#clear-repo-btn {
+    background: linear-gradient(90deg, #f87171 60%, #fbbf24 100%);
+    border: none;
+}
+
+#clear-chat-btn {
+    background: linear-gradient(90deg, #fbbf24 60%, #f87171 100%);
+    border: none;
+}
+
+#send-btn:hover,
+#clear-repo-btn:hover,
+#clear-chat-btn:hover,
+#ingest-btn:hover {
+    filter: brightness(0.95);
+    opacity: 0.95;
 }
