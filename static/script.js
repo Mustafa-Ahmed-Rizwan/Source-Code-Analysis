@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         repoMessage.classList.remove('text-red-500', 'text-green-500');
 
         try {
+            repoMessage.textContent = 'Initializing embeddings and processing repository... This may take a moment.';
             const response = await fetch('/chatbot', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

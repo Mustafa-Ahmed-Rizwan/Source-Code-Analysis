@@ -13,6 +13,7 @@ import re
 # Global variables need to be defined at module level
 qa = None
 current_repo_hash = None
+embeddings = load_embedding()  # Preload embeddings
 
 def setup_routes(app, persist_directory):
     global qa, current_repo_hash
@@ -66,7 +67,7 @@ Provide the answer in clear, simple language with a professional tone, formatted
                 if repo_path:
                     documents = load_repo(repo_path)
                     text_chunks = function_class_chunker(documents)
-                    vectordb = FAISS.from_documents(documents=text_chunks, embedding=load_embedding())
+                    vectordb = FAISS.from_documents(documents=text_chunks, embedding=embeddings)  # Use preloaded embeddings
                     os.makedirs(os.path.dirname(db_path), exist_ok=True)
                     vectordb.save_local(db_path)
                 else:
@@ -74,7 +75,7 @@ Provide the answer in clear, simple language with a professional tone, formatted
             elif current_repo_hash:
                 db_path = os.path.join(persist_directory, current_repo_hash, "faiss_index")
                 if os.path.exists(db_path):
-                    vectordb = FAISS.load_local(db_path, load_embedding(), allow_dangerous_deserialization=True)
+                    vectordb = FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)  # Use preloaded embeddings
                 else:
                     return {"status": "error", "message": "No existing vector DB found for current repository."}
             else:
