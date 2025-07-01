@@ -13,6 +13,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 import stat
 from pycparser import CParser, parse_file
+import clang.cindex  # Added import for libclang
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +38,7 @@ def repo_ingestion(repo_url):
 # Loading repositories as documents
 def load_repo(repo_path):
     try:
-        # Load Python, C, and header (.h) files
+        # Load Python, C, header (.h), C++ (.cpp, .hpp) files
         loaders = [
             GenericLoader.from_filesystem(
                 repo_path,
@@ -55,16 +56,28 @@ def load_repo(repo_path):
                 repo_path,
                 glob="**/*.h",
                 suffixes=[".h"],
-                parser=LanguageParser(language=Language.C, parser_threshold=500)  # Assuming C parser for .h files
+                parser=LanguageParser(language=Language.C, parser_threshold=500)
+            ),
+            GenericLoader.from_filesystem(
+                repo_path,
+                glob="**/*.cpp",
+                suffixes=[".cpp"],
+                parser=LanguageParser(language=Language.CPP, parser_threshold=500)
+            ),
+            GenericLoader.from_filesystem(
+                repo_path,
+                glob="**/*.hpp",
+                suffixes=[".hpp"],
+                parser=LanguageParser(language=Language.CPP, parser_threshold=500)
             )
         ]
         documents = []
         for loader in loaders:
             docs = loader.load()
             documents.extend(docs)
-        logger.info(f"Loaded {len(documents)} documents (Python, C, and header) from {repo_path}")
+        logger.info(f"Loaded {len(documents)} documents (Python, C, header, and C++) from {repo_path}")
         if not documents:
-            raise ValueError(f"No Python, C, or header files found in {repo_path}.")
+            raise ValueError(f"No Python, C, header, or C++ files found in {repo_path}.")
         return documents
     except Exception as e:
         logger.error(f"Error loading repository {repo_path}: {str(e)}")
@@ -88,7 +101,7 @@ def load_embedding():
 
 def function_class_chunker(documents, max_chunk_size=1800, overlap=200):
     """
-    Splits Python and C code into function/class or function-level chunks with metadata.
+    Splits Python, C, and C++ code into function/class or function-level chunks with metadata.
     If a chunk is too large, further splits it using character-based splitting.
     """
     chunks = []
@@ -170,6 +183,36 @@ def function_class_chunker(documents, max_chunk_size=1800, overlap=200):
                                 chunks.append({"content": sub_chunk, "metadata": sub_metadata})
                         else:
                             chunks.append({"content": chunk_code, "metadata": metadata})
+            elif file_extension in [".cpp", ".hpp"]:
+                index = clang.cindex.Index.create()
+                tu = index.parse(file_path)
+                for node in tu.cursor.walk_preorder():
+                    if node.location.file and os.path.abspath(node.location.file.name) == os.path.abspath(file_path):
+                        if node.kind in (
+                            clang.cindex.CursorKind.FUNCTION_DECL,
+                            clang.cindex.CursorKind.CXX_METHOD,
+                            clang.cindex.CursorKind.CLASS_DECL
+                        ):
+                            start_line = node.extent.start.line - 1
+                            end_line = node.extent.end.line
+                            with open(file_path, 'r') as f:
+                                lines = f.readlines()
+                                chunk_code = "".join(lines[start_line:end_line]).strip()
+                            metadata = {
+                                "type": node.kind.name,
+                                "name": node.spelling,
+                                "file": file_path,
+                                "start_line": start_line + 1,
+                                "end_line": end_line
+                            }
+                            if len(chunk_code) > max_chunk_size:
+                                for i in range(0, len(chunk_code), max_chunk_size - overlap):
+                                    sub_chunk = chunk_code[i:i + max_chunk_size]
+                                    sub_metadata = metadata.copy()
+                                    sub_metadata["split"] = f"{i//(max_chunk_size - overlap) + 1}"
+                                    chunks.append({"content": sub_chunk, "metadata": sub_metadata})
+                            else:
+                                chunks.append({"content": chunk_code, "metadata": metadata})
         except Exception as e:
             logger.warning(f"Parsing failed for {file_path}: {e}. Falling back to character split.")
             for i in range(0, len(code), max_chunk_size - overlap):
