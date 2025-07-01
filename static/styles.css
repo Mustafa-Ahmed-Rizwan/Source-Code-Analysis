@@ -1,6 +1,72 @@
-/* Custom styles to complement Tailwind */
+/* Custom styles to complement Tailwind with dark mode */
 body {
     background: #f5f7fa;
+    transition: background-color 0.3s ease;
+}
+
+body.dark-mode {
+    background: #1a202c;
+    color: #e2e8f0;
+}
+
+#theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+#theme-toggle input {
+    display: none;
+}
+
+#theme-toggle label {
+    font-size: 0.875rem;
+    color: #4a5568;
+}
+
+body.dark-mode #theme-toggle label {
+    color: #a0aec0;
+}
+
+#theme-toggle .switch {
+    position: relative;
+    width: 2.5rem;
+    height: 1.5rem;
+    background: #e2e8f0;
+    border-radius: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+body.dark-mode #theme-toggle .switch {
+    background: #4a5568;
+}
+
+#theme-toggle .switch::after {
+    content: '';
+    position: absolute;
+    width: 1.25rem;
+    height: 1.25rem;
+    background: #fff;
+    border-radius: 50%;
+    top: 0.125rem;
+    left: 0.125rem;
+    transition: transform 0.3s ease;
+}
+
+#theme-toggle input:checked+.switch::after {
+    transform: translateX(1rem);
+}
+
+body.dark-mode #theme-toggle input:checked+.switch::after {
+    background: #edf2f7;
+}
+
+#theme-toggle input:checked+.switch {
+    background: #2d3748;
 }
 
 #repo-section,
@@ -9,6 +75,16 @@ body {
     border-radius: 1rem;
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
     border: 1px solid #e5e7eb;
+    padding: 1.5rem;
+    margin: 1rem auto;
+    max-width: 800px;
+}
+
+body.dark-mode #repo-section,
+body.dark-mode #chat-section {
+    background: #2d3748;
+    border-color: #4a5568;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
 }
 
 #chat-container {
@@ -16,12 +92,17 @@ body {
     overflow-y: auto;
     padding: 1.5rem;
     background-color: #f3f4f6;
-    /* Tailwind's bg-gray-100 */
     border-radius: 1rem;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e0 #f7fafc;
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
     border: none;
+    margin-top: 1rem;
+}
+
+body.dark-mode #chat-container {
+    background-color: #4a5568;
+    scrollbar-color: #a0aec0 #2d3748;
 }
 
 #chat-container::-webkit-scrollbar {
@@ -32,9 +113,17 @@ body {
     background: #f7fafc;
 }
 
+body.dark-mode #chat-container::-webkit-scrollbar-track {
+    background: #2d3748;
+}
+
 #chat-container::-webkit-scrollbar-thumb {
     background-color: #cbd5e0;
     border-radius: 4px;
+}
+
+body.dark-mode #chat-container::-webkit-scrollbar-thumb {
+    background-color: #a0aec0;
 }
 
 .message {
@@ -49,11 +138,22 @@ body {
     border: 1px solid #e5e7eb;
 }
 
+body.dark-mode .message {
+    background: #4a5568;
+    border-color: #718096;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 .user-message {
     background: linear-gradient(90deg, #e0e7ff 60%, #f9fafb 100%);
     margin-left: 4rem;
     text-align: right;
     border-right: 4px solid #6366f1;
+}
+
+body.dark-mode .user-message {
+    background: linear-gradient(90deg, #4c51bf 60%, #2d3748 100%);
+    border-right-color: #a3bffa;
 }
 
 .bot-message {
@@ -63,11 +163,15 @@ body {
     box-shadow: 0 2px 12px rgba(16, 185, 129, 0.06);
 }
 
+body.dark-mode .bot-message {
+    background: linear-gradient(90deg, #276749 60%, #2d3748 100%);
+    border-left-color: #6ee7b7;
+    box-shadow: 0 2px 12px rgba(16, 185, 129, 0.15);
+}
+
 .code-snippet {
     background-color: #000 !important;
-    /* Force black background */
     color: #d1d5db !important;
-    /* Light gray text */
     padding: 1rem;
     border-radius: 0.5rem;
     font-family: 'Fira Mono', 'Consolas', monospace;
@@ -76,24 +180,32 @@ body {
     border: 1px solid #4b5563;
 }
 
+body.dark-mode .code-snippet {
+    border-color: #718096;
+}
+
 .code-snippet::before {
     color: #9ca3af !important;
-    /* Subtle gray label */
     display: none;
-    /* Remove the "Code" label to avoid confusion */
 }
 
 pre code {
     background-color: transparent !important;
-    /* Ensure no background on code inside pre */
     color: #d1d5db !important;
-    /* Match text color */
+}
+
+body.dark-mode pre code {
+    color: #e2e8f0;
 }
 
 .paragraph {
     margin-bottom: 1rem;
     line-height: 1.7;
     color: #22223b;
+}
+
+body.dark-mode .paragraph {
+    color: #e2e8f0;
 }
 
 .bullet-point {
@@ -109,12 +221,20 @@ h2 {
     margin-bottom: 0.5rem;
 }
 
+body.dark-mode h2 {
+    color: #f7fafc;
+}
+
 h3 {
     font-size: 1.2rem;
     font-weight: 600;
     color: #475569;
     margin-top: 1rem;
     margin-bottom: 0.5rem;
+}
+
+body.dark-mode h3 {
+    color: #a0aec0;
 }
 
 pre {
@@ -128,11 +248,21 @@ pre {
     border: 1px solid #334155;
 }
 
+body.dark-mode pre {
+    background-color: #2d3748;
+    border-color: #4a5568;
+}
+
 code {
     background-color: #f1f5f9;
     padding: 0.2rem 0.4rem;
     border-radius: 0.3rem;
     color: #1e293b;
+}
+
+body.dark-mode code {
+    background-color: #2d3748;
+    color: #e2e8f0;
 }
 
 #chat-message {
@@ -142,12 +272,39 @@ code {
     font-weight: 500;
 }
 
+body.dark-mode #chat-message {
+    color: #e2e8f0;
+}
+
 .text-green-500 {
     color: #16a34a;
 }
 
+body.dark-mode .text-green-500 {
+    color: #6ee7b7;
+}
+
 .text-red-500 {
     color: #dc2626;
+}
+
+body.dark-mode .text-red-500 {
+    color: #f87171;
+}
+
+body.dark-mode #repo-message {
+    color: #e2e8f0 !important;
+    /* default text */
+}
+
+body.dark-mode #repo-message.text-green-500 {
+    color: #34d399 !important;
+    /* brighter green for dark bg */
+}
+
+body.dark-mode #repo-message.text-red-500 {
+    color: #f87171 !important;
+    /* keep error visible */
 }
 
 /* Buttons */
@@ -158,6 +315,9 @@ code {
     font-weight: 600;
     letter-spacing: 0.02em;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
 }
 
 #send-btn {
@@ -165,14 +325,26 @@ code {
     border: none;
 }
 
+body.dark-mode #send-btn {
+    background: linear-gradient(90deg, #4c51bf 60%, #60a5fa 100%);
+}
+
 #clear-repo-btn {
     background: linear-gradient(90deg, #f87171 60%, #fbbf24 100%);
     border: none;
 }
 
+body.dark-mode #clear-repo-btn {
+    background: linear-gradient(90deg, #dc2626 60%, #f59e0b 100%);
+}
+
 #clear-chat-btn {
     background: linear-gradient(90deg, #fbbf24 60%, #f87171 100%);
     border: none;
+}
+
+body.dark-mode #clear-chat-btn {
+    background: linear-gradient(90deg, #f59e0b 60%, #dc2626 100%);
 }
 
 #send-btn:hover,
@@ -181,4 +353,214 @@ code {
 #ingest-btn:hover {
     filter: brightness(0.95);
     opacity: 0.95;
+}
+
+#ingest-btn {
+    background: linear-gradient(90deg, #10b981 60%, #34d399 100%);
+    border: none;
+}
+
+body.dark-mode #ingest-btn {
+    background: linear-gradient(90deg, #276749 60%, #34d399 100%);
+}
+
+/* Layout Improvements */
+.container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+#repo-section,
+#chat-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+#chat-input {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    margin-top: 0.5rem;
+}
+
+body.dark-mode #chat-input {
+    background: #4a5568;
+    border-color: #718096;
+    color: #e2e8f0;
+}
+
+body.dark-mode h1 {
+    color: #f7fafc !important;
+    /* bright white */
+}
+
+/* Responsive Design Enhancements */
+
+/* Make containers and sections responsive */
+.container,
+#repo-section,
+#chat-section {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 1rem;
+    margin: 0 auto;
+}
+
+/* Responsive chat container */
+#chat-container {
+    padding: 1rem;
+    max-height: 50vh;
+}
+
+/* Responsive font sizes and spacing */
+body,
+.message,
+.user-message,
+.bot-message,
+.paragraph,
+h2,
+h3 {
+    font-size: 1rem;
+}
+
+@media (max-width: 900px) {
+
+    .container,
+    #repo-section,
+    #chat-section {
+        max-width: 95vw;
+        padding: 0.5rem;
+    }
+
+    #chat-container {
+        padding: 0.5rem;
+        max-height: 40vh;
+    }
+
+    .user-message,
+    .bot-message {
+        margin-left: 0;
+        margin-right: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    html {
+        font-size: 15px;
+    }
+
+    body,
+    html {
+        min-height: 100vh;
+        width: 100vw;
+        overflow-x: hidden;
+    }
+
+    .container {
+        margin: 0;
+        padding: 0.25rem;
+    }
+
+    #repo-section,
+    #chat-section {
+        margin: 0.25rem 0;
+        padding: 0.5rem 0.25rem;
+        border-radius: 0.5rem;
+    }
+
+    #chat-container {
+        padding: 0.25rem;
+        border-radius: 0.5rem;
+        max-height: 35vh;
+        min-height: 120px;
+    }
+
+    #theme-toggle {
+        top: 0.25rem;
+        right: 0.25rem;
+        gap: 0.15rem;
+        font-size: 0.9rem;
+    }
+
+    h1 {
+        font-size: 1.1rem;
+        padding: 0.25rem 0;
+        text-align: center;
+    }
+
+    #repo-section input[type="text"] {
+        font-size: 0.95rem;
+        padding: 0.4rem 0.5rem;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    #repo-section button,
+    #send-btn,
+    #clear-repo-btn,
+    #clear-chat-btn,
+    #ingest-btn {
+        width: 100%;
+        margin-top: 0.25rem;
+        font-size: 1rem;
+        padding: 0.5rem 0;
+    }
+
+    #repo-section {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    #chat-input {
+        font-size: 1rem;
+        padding: 0.4rem;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Stack chat input and buttons vertically */
+    #chat-section form,
+    #chat-section .chat-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        width: 100%;
+    }
+
+    /* Allow horizontal scroll for code blocks */
+    pre,
+    .code-snippet {
+        overflow-x: auto;
+        word-break: break-all;
+        font-size: 0.95rem;
+    }
+
+    /* Reduce message padding */
+    .message,
+    .user-message,
+    .bot-message {
+        padding: 0.6rem 0.5rem;
+        font-size: 0.95rem;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    /* Make buttons more touch-friendly */
+    button {
+        min-height: 44px;
+    }
+}
+
+/* Stack sections vertically on small screens */
+@media (max-width: 600px) {
+
+    #repo-section,
+    #chat-section {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
 }

@@ -9,8 +9,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearChatBtn = document.getElementById('clear-chat-btn');
     const chatContainer = document.getElementById('chat-container');
     const chatMessage = document.getElementById('chat-message');
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
 
     let isInitialized = false;
+
+    // Handle dark mode toggle
+    darkModeToggle.addEventListener('change', () => {
+        document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        localStorage.setItem('darkMode', darkModeToggle.checked);
+    });
+
+    // Load dark mode preference from localStorage on page load
+    if (localStorage.getItem('darkMode') === 'true') {
+        darkModeToggle.checked = true;
+        document.body.classList.add('dark-mode');
+    }
 
     // Handle repository ingestion
     ingestBtn.addEventListener('click', async () => {

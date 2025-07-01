@@ -20,7 +20,7 @@ def setup_routes(app, persist_directory):
 
     # Setup LLM
     llm = ChatGroq(
-        model="llama3-8b-8192",
+        model="llama3-70b-8192",
         temperature=0.5,
         max_tokens=512,
         timeout=10,
@@ -31,13 +31,18 @@ def setup_routes(app, persist_directory):
     CUSTOM_PROMPT_TEMPLATE = """
     You are an expert code assistant with a professional and clear communication style. Your task is to analyze the provided context from the codebase and answer the user's question in well-structured Markdown format. Follow these guidelines:
 
-- Use proper Markdown headings (e.g., `## Heading`, `### Subheading`) to organize the response into sections.
-- Use paragraphs for detailed explanations, ensuring each paragraph focuses on a single key point.
+- Use proper Markdown headings (e.g., `## Overview`, `## Details`, `## Summary`) to organize the response.
+- Start with a `## Overview` summarizing the main point.
+- In `## Details`, provide step-by-step explanations, referencing filenames and line numbers if available.
 - When listing items, use Markdown bullet points with a consistent format (e.g., `- Item: Description`).
-- Include relevant code snippets from the context when they help clarify the answer, formatting them with triple backticks (``````) and specify the language (e.g., ````python` or ````sql`) for syntax highlighting.
-- Maintain a logical order: start with an overview under a `## Overview` heading, provide details or steps under a `## Details` or `## Steps` heading, and conclude with a summary or next steps under a `## Summary` heading if applicable.
-- If the answer is not found in the context, respond with: `## Answer\nI don't know based on the provided context.`
-- Avoid making up information, speculation, or small talk; focus solely on technical accuracy and relevance.
+- Include relevant code snippets from the context, formatted with triple backticks and the language (e.g., ````python`).
+- For warnings, errors, or important notes, use blockquotes (`>`) or bold text.
+- If you make any assumptions, list them under an `## Assumptions` section.
+- If the answer is not found in the context, respond with:  
+  `## Answer`  
+  I don't know based on the provided context.
+- Avoid speculation or small talk; focus solely on technical accuracy and relevance.
+- End with a `## Summary` or `## Next Steps` section, providing a concise recap or actionable advice.
 
 Context:
 {context}
