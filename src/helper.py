@@ -12,6 +12,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 import stat
+from pycparser import CParser, parse_file
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -36,16 +37,34 @@ def repo_ingestion(repo_url):
 # Loading repositories as documents
 def load_repo(repo_path):
     try:
-        loader = GenericLoader.from_filesystem(
-            repo_path,
-            glob="**/*.py",
-            suffixes=[".py"],
-            parser=LanguageParser(language=Language.PYTHON, parser_threshold=500)
-        )
-        documents = loader.load()
-        logger.info(f"Loaded {len(documents)} documents from {repo_path}")
+        # Load Python, C, and header (.h) files
+        loaders = [
+            GenericLoader.from_filesystem(
+                repo_path,
+                glob="**/*.py",
+                suffixes=[".py"],
+                parser=LanguageParser(language=Language.PYTHON, parser_threshold=500)
+            ),
+            GenericLoader.from_filesystem(
+                repo_path,
+                glob="**/*.c",
+                suffixes=[".c"],
+                parser=LanguageParser(language=Language.C, parser_threshold=500)
+            ),
+            GenericLoader.from_filesystem(
+                repo_path,
+                glob="**/*.h",
+                suffixes=[".h"],
+                parser=LanguageParser(language=Language.C, parser_threshold=500)  # Assuming C parser for .h files
+            )
+        ]
+        documents = []
+        for loader in loaders:
+            docs = loader.load()
+            documents.extend(docs)
+        logger.info(f"Loaded {len(documents)} documents (Python, C, and header) from {repo_path}")
         if not documents:
-            raise ValueError(f"No Python files found in {repo_path}.")
+            raise ValueError(f"No Python, C, or header files found in {repo_path}.")
         return documents
     except Exception as e:
         logger.error(f"Error loading repository {repo_path}: {str(e)}")
@@ -54,7 +73,7 @@ def load_repo(repo_path):
 # Creating text chunks
 def text_splitter(documents):
     documents_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=Language.PYTHON,
+        language=Language.PYTHON,  # Default to PYTHON, adjust for C if needed
         chunk_size=2000,
         chunk_overlap=200
     )
@@ -69,40 +88,90 @@ def load_embedding():
 
 def function_class_chunker(documents, max_chunk_size=1800, overlap=200):
     """
-    Splits Python code into function/class-level chunks with metadata.
+    Splits Python and C code into function/class or function-level chunks with metadata.
     If a chunk is too large, further splits it using character-based splitting.
     """
     chunks = []
     for doc in documents:
         code = doc.page_content if hasattr(doc, "page_content") else doc
         file_path = doc.metadata.get("source", "unknown") if hasattr(doc, "metadata") else "unknown"
+        file_extension = os.path.splitext(file_path)[1].lower()
         try:
-            tree = ast.parse(code)
-            for node in tree.body:
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                    start_line = node.lineno - 1
-                    end_line = getattr(node, 'end_lineno', None)
-                    if end_line is None:
-                        end_line = node.body[-1].lineno if node.body else node.lineno
-                    lines = code.splitlines()
-                    chunk_code = "\n".join(lines[start_line:end_line])
-                    metadata = {
-                        "type": type(node).__name__,
-                        "name": getattr(node, "name", ""),
-                        "file": file_path,
-                        "start_line": start_line + 1,
-                        "end_line": end_line
-                    }
-                    if len(chunk_code) > max_chunk_size:
-                        for i in range(0, len(chunk_code), max_chunk_size - overlap):
-                            sub_chunk = chunk_code[i:i + max_chunk_size]
-                            sub_metadata = metadata.copy()
-                            sub_metadata["split"] = f"{i//(max_chunk_size - overlap) + 1}"
-                            chunks.append({"content": sub_chunk, "metadata": sub_metadata})
-                    else:
-                        chunks.append({"content": chunk_code, "metadata": metadata})
+            if file_extension == ".py":
+                tree = ast.parse(code)
+                for node in tree.body:
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                        start_line = node.lineno - 1
+                        end_line = getattr(node, 'end_lineno', None)
+                        if end_line is None:
+                            end_line = node.body[-1].lineno if node.body else node.lineno
+                        lines = code.splitlines()
+                        chunk_code = "\n".join(lines[start_line:end_line])
+                        metadata = {
+                            "type": type(node).__name__,
+                            "name": getattr(node, "name", ""),
+                            "file": file_path,
+                            "start_line": start_line + 1,
+                            "end_line": end_line
+                        }
+                        if len(chunk_code) > max_chunk_size:
+                            for i in range(0, len(chunk_code), max_chunk_size - overlap):
+                                sub_chunk = chunk_code[i:i + max_chunk_size]
+                                sub_metadata = metadata.copy()
+                                sub_metadata["split"] = f"{i//(max_chunk_size - overlap) + 1}"
+                                chunks.append({"content": sub_chunk, "metadata": sub_metadata})
+                        else:
+                            chunks.append({"content": chunk_code, "metadata": metadata})
+            elif file_extension == ".c":
+                parser = CParser()
+                tree = parser.parse(code)
+                for node in ast.walk(tree):
+                    if hasattr(node, 'coord'):
+                        start_line = node.coord.line - 1
+                        end_line = node.coord.line
+                        lines = code.splitlines()
+                        chunk_code = "\n".join(lines[start_line:end_line])
+                        metadata = {
+                            "type": node.__class__.__name__,
+                            "name": getattr(node, "name", ""),
+                            "file": file_path,
+                            "start_line": start_line + 1,
+                            "end_line": end_line
+                        }
+                        if len(chunk_code) > max_chunk_size:
+                            for i in range(0, len(chunk_code), max_chunk_size - overlap):
+                                sub_chunk = chunk_code[i:i + max_chunk_size]
+                                sub_metadata = metadata.copy()
+                                sub_metadata["split"] = f"{i//(max_chunk_size - overlap) + 1}"
+                                chunks.append({"content": sub_chunk, "metadata": sub_metadata})
+                        else:
+                            chunks.append({"content": chunk_code, "metadata": metadata})
+            elif file_extension == ".h":
+                parser = CParser()
+                tree = parser.parse(code)
+                for node in ast.walk(tree):
+                    if hasattr(node, 'coord'):
+                        start_line = node.coord.line - 1
+                        end_line = node.coord.line
+                        lines = code.splitlines()
+                        chunk_code = "\n".join(lines[start_line:end_line])
+                        metadata = {
+                            "type": node.__class__.__name__,
+                            "name": getattr(node, "name", ""),
+                            "file": file_path,
+                            "start_line": start_line + 1,
+                            "end_line": end_line
+                        }
+                        if len(chunk_code) > max_chunk_size:
+                            for i in range(0, len(chunk_code), max_chunk_size - overlap):
+                                sub_chunk = chunk_code[i:i + max_chunk_size]
+                                sub_metadata = metadata.copy()
+                                sub_metadata["split"] = f"{i//(max_chunk_size - overlap) + 1}"
+                                chunks.append({"content": sub_chunk, "metadata": sub_metadata})
+                        else:
+                            chunks.append({"content": chunk_code, "metadata": metadata})
         except Exception as e:
-            logger.warning(f"AST parsing failed for {file_path}: {e}. Falling back to character split.")
+            logger.warning(f"Parsing failed for {file_path}: {e}. Falling back to character split.")
             for i in range(0, len(code), max_chunk_size - overlap):
                 chunk_code = code[i:i + max_chunk_size]
                 metadata = {"type": "char_split", "file": file_path, "split": f"{i//(max_chunk_size - overlap) + 1}"}
