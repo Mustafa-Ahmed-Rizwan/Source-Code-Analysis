@@ -17,6 +17,8 @@ from pycparser import CParser, parse_file
 import clang.cindex  # Added import for libclang
 from bs4 import BeautifulSoup
 import tinycss2
+import esprima
+import javalang
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -101,7 +103,29 @@ def load_repo(repo_path):
                 )
                 documents.append(doc)
 
-        logger.info(f"Loaded {len(documents)} documents (Python, C, C++, HTML, CSS) from {repo_path}")
+        # Manually load and parse JS files
+        for js_file in glob.glob(os.path.join(repo_path, "**/*.js"), recursive=True):
+            with open(js_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                tree = esprima.parseScript(content)
+                doc = Document(
+                    page_content=content,  # Use raw content for now, can refine with tree traversal
+                    metadata={"source": js_file, "type": "JS_Script"}
+                )
+                documents.append(doc)
+
+        # Manually load and parse Java files
+        for java_file in glob.glob(os.path.join(repo_path, "**/*.java"), recursive=True):
+            with open(java_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                tree = javalang.parse.parse(content)
+                doc = Document(
+                    page_content=content,  # Use raw content for now, can refine with tree traversal
+                    metadata={"source": java_file, "type": "Java_Class"}
+                )
+                documents.append(doc)
+
+        logger.info(f"Loaded {len(documents)} documents (Python, C, C++, HTML, CSS, JS, Java) from {repo_path}")
         if not documents:
             raise ValueError(f"No supported files found in {repo_path}.")
         return documents
@@ -127,7 +151,7 @@ def load_embedding():
 
 def function_class_chunker(documents, max_chunk_size=1800, overlap=200):
     """
-    Splits Python, C, C++, HTML, and CSS code into function/class or logical chunks with metadata.
+    Splits Python, C, C++, HTML, CSS, JS, and Java code into function/class or logical chunks with metadata.
     If a chunk is too large, further splits it using character-based splitting.
     """
     chunks = []
@@ -260,6 +284,40 @@ def function_class_chunker(documents, max_chunk_size=1800, overlap=200):
                 chunk_code = doc.page_content
                 metadata = {
                     "type": "CSS_Rule",
+                    "name": os.path.basename(doc.metadata["source"]),
+                    "file": doc.metadata["source"],
+                    "start_line": 1,
+                    "end_line": len(chunk_code.splitlines())
+                }
+                if len(chunk_code) > max_chunk_size:
+                    for i in range(0, len(chunk_code), max_chunk_size - overlap):
+                        sub_chunk = chunk_code[i:i + max_chunk_size]
+                        sub_metadata = metadata.copy()
+                        sub_metadata["split"] = f"{i//(max_chunk_size - overlap) + 1}"
+                        chunks.append({"content": sub_chunk, "metadata": sub_metadata})
+                else:
+                    chunks.append({"content": chunk_code, "metadata": metadata})
+            elif "type" in doc.metadata and doc.metadata["type"] == "JS_Script":
+                chunk_code = doc.page_content
+                metadata = {
+                    "type": "JS_Script",
+                    "name": os.path.basename(doc.metadata["source"]),
+                    "file": doc.metadata["source"],
+                    "start_line": 1,
+                    "end_line": len(chunk_code.splitlines())
+                }
+                if len(chunk_code) > max_chunk_size:
+                    for i in range(0, len(chunk_code), max_chunk_size - overlap):
+                        sub_chunk = chunk_code[i:i + max_chunk_size]
+                        sub_metadata = metadata.copy()
+                        sub_metadata["split"] = f"{i//(max_chunk_size - overlap) + 1}"
+                        chunks.append({"content": sub_chunk, "metadata": sub_metadata})
+                else:
+                    chunks.append({"content": chunk_code, "metadata": metadata})
+            elif "type" in doc.metadata and doc.metadata["type"] == "Java_Class":
+                chunk_code = doc.page_content
+                metadata = {
+                    "type": "Java_Class",
                     "name": os.path.basename(doc.metadata["source"]),
                     "file": doc.metadata["source"],
                     "start_line": 1,
