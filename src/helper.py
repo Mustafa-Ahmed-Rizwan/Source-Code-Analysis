@@ -4,6 +4,7 @@ import shutil
 import hashlib
 import logging
 import ast
+import glob
 from git import Repo
 from langchain_community.document_loaders.generic import GenericLoader
 from langchain_community.document_loaders.parsers.language.language_parser import LanguageParser
@@ -14,6 +15,8 @@ from langchain_core.documents import Document
 import stat
 from pycparser import CParser, parse_file
 import clang.cindex  # Added import for libclang
+from bs4 import BeautifulSoup
+import tinycss2
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +41,7 @@ def repo_ingestion(repo_url):
 # Loading repositories as documents
 def load_repo(repo_path):
     try:
-        # Load Python, C, header (.h), C++ (.cpp, .hpp) files
+        # Load Python, C, and C++ files with LanguageParser
         loaders = [
             GenericLoader.from_filesystem(
                 repo_path,
@@ -75,9 +78,32 @@ def load_repo(repo_path):
         for loader in loaders:
             docs = loader.load()
             documents.extend(docs)
-        logger.info(f"Loaded {len(documents)} documents (Python, C, header, and C++) from {repo_path}")
+
+        # Manually load and parse HTML files
+        for html_file in glob.glob(os.path.join(repo_path, "**/*.html"), recursive=True):
+            with open(html_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                soup = BeautifulSoup(content, 'html.parser')
+                doc = Document(
+                    page_content=str(soup.prettify()),
+                    metadata={"source": html_file, "type": "HTML_Document"}
+                )
+                documents.append(doc)
+
+        # Manually load and parse CSS files
+        for css_file in glob.glob(os.path.join(repo_path, "**/*.css"), recursive=True):
+            with open(css_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                rules = list(tinycss2.parse_stylesheet(content, skip_comments=True))
+                doc = Document(
+                    page_content="\n".join(str(rule) for rule in rules),
+                    metadata={"source": css_file, "type": "CSS_Rule"}
+                )
+                documents.append(doc)
+
+        logger.info(f"Loaded {len(documents)} documents (Python, C, C++, HTML, CSS) from {repo_path}")
         if not documents:
-            raise ValueError(f"No Python, C, header, or C++ files found in {repo_path}.")
+            raise ValueError(f"No supported files found in {repo_path}.")
         return documents
     except Exception as e:
         logger.error(f"Error loading repository {repo_path}: {str(e)}")
@@ -101,7 +127,7 @@ def load_embedding():
 
 def function_class_chunker(documents, max_chunk_size=1800, overlap=200):
     """
-    Splits Python, C, and C++ code into function/class or function-level chunks with metadata.
+    Splits Python, C, C++, HTML, and CSS code into function/class or logical chunks with metadata.
     If a chunk is too large, further splits it using character-based splitting.
     """
     chunks = []
@@ -213,6 +239,40 @@ def function_class_chunker(documents, max_chunk_size=1800, overlap=200):
                                     chunks.append({"content": sub_chunk, "metadata": sub_metadata})
                             else:
                                 chunks.append({"content": chunk_code, "metadata": metadata})
+            elif "type" in doc.metadata and doc.metadata["type"] == "HTML_Document":
+                chunk_code = doc.page_content
+                metadata = {
+                    "type": "HTML_Document",
+                    "name": os.path.basename(doc.metadata["source"]),
+                    "file": doc.metadata["source"],
+                    "start_line": 1,
+                    "end_line": len(chunk_code.splitlines())
+                }
+                if len(chunk_code) > max_chunk_size:
+                    for i in range(0, len(chunk_code), max_chunk_size - overlap):
+                        sub_chunk = chunk_code[i:i + max_chunk_size]
+                        sub_metadata = metadata.copy()
+                        sub_metadata["split"] = f"{i//(max_chunk_size - overlap) + 1}"
+                        chunks.append({"content": sub_chunk, "metadata": sub_metadata})
+                else:
+                    chunks.append({"content": chunk_code, "metadata": metadata})
+            elif "type" in doc.metadata and doc.metadata["type"] == "CSS_Rule":
+                chunk_code = doc.page_content
+                metadata = {
+                    "type": "CSS_Rule",
+                    "name": os.path.basename(doc.metadata["source"]),
+                    "file": doc.metadata["source"],
+                    "start_line": 1,
+                    "end_line": len(chunk_code.splitlines())
+                }
+                if len(chunk_code) > max_chunk_size:
+                    for i in range(0, len(chunk_code), max_chunk_size - overlap):
+                        sub_chunk = chunk_code[i:i + max_chunk_size]
+                        sub_metadata = metadata.copy()
+                        sub_metadata["split"] = f"{i//(max_chunk_size - overlap) + 1}"
+                        chunks.append({"content": sub_chunk, "metadata": sub_metadata})
+                else:
+                    chunks.append({"content": chunk_code, "metadata": metadata})
         except Exception as e:
             logger.warning(f"Parsing failed for {file_path}: {e}. Falling back to character split.")
             for i in range(0, len(code), max_chunk_size - overlap):
