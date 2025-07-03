@@ -13,10 +13,11 @@ import re
 # Global variables need to be defined at module level
 qa = None
 current_repo_hash = None
+current_repo_path = None  # Add this line
 embeddings = load_embedding()  # Preload embeddings
 
 def setup_routes(app, persist_directory):
-    global qa, current_repo_hash
+    global qa, current_repo_hash, current_repo_path
 
     # Setup LLM
     llm = ChatGroq(
@@ -37,7 +38,7 @@ def setup_routes(app, persist_directory):
 - When listing items, use Markdown bullet points with a consistent format (e.g., `- Item: Description`).
 - Include relevant code snippets from the context, formatted with triple backticks and the language (e.g., ````python`).
 - For warnings, errors, or important notes, use blockquotes (`>`) or bold text.
-- If you make any assumptions, list them under an `## Assumptions` section.
+- If you make any assumptions, list them under an `## Assumptions` section if there are none then output this heading.
 - If the answer is not found in the context, respond with:  
   `## Answer`  
   I don't know based on the provided context.
@@ -58,7 +59,7 @@ Provide the answer in clear, simple language with a professional tone, formatted
     )
 
     def initialize_vector_db(repo_url=None, repo_path=None):
-        global qa, current_repo_hash
+        global qa, current_repo_hash, current_repo_path
         if qa is not None:
             qa = None
         memory = ConversationSummaryMemory(llm=llm, memory_key="chat_history", return_messages=True)
@@ -67,6 +68,7 @@ Provide the answer in clear, simple language with a professional tone, formatted
                 repo_hash = get_repo_hash(repo_url)
                 db_path = os.path.join(persist_directory, repo_hash, "faiss_index")
                 current_repo_hash = repo_hash
+                current_repo_path = repo_path  # Save the repo path globally
                 if os.path.exists(db_path):
                     shutil.rmtree(os.path.join(persist_directory, repo_hash))
                 if repo_path:
@@ -112,7 +114,7 @@ Provide the answer in clear, simple language with a professional tone, formatted
                     repo_hash = get_repo_hash(user_input)
                     old_db_path = os.path.join(persist_directory, repo_hash, "faiss_index")
                     if os.path.exists(old_db_path):
-                        shutil.rmtree(os.path.join(persist_directory, repo_hash))
+                        shutil.rmtree(os.path.join(persist_directory, repo_hash), onerror=remove_readonly)
                     init_result = initialize_vector_db(repo_url=user_input, repo_path=repo_path)
                     return jsonify({"response": init_result["message"] if init_result["status"] == "success" else repo_result["message"]})
                 return jsonify({"response": "Could not determine repository path. Please ingest a new repository."})
@@ -122,25 +124,24 @@ Provide the answer in clear, simple language with a professional tone, formatted
 
     @app.route("/get", methods=["POST"])
     def chat():
-        global qa, current_repo_hash
+        global qa, current_repo_hash, current_repo_path
         msg = request.form["msg"]
-        if msg == "clear_repo":
-            if current_repo_hash and os.path.exists(os.path.join(persist_directory, current_repo_hash)):
-                shutil.rmtree(os.path.join(persist_directory, current_repo_hash), onerror=remove_readonly)
-            import glob
-            repo_dirs = glob.glob(f"*/{current_repo_hash}")
-            for repo_dir in repo_dirs:
-                if os.path.exists(repo_dir):
-                    shutil.rmtree(repo_dir, onerror=remove_readonly)
-            qa = None
-            cleared_repo = current_repo_hash
-            current_repo_hash = None
-            return jsonify({"response": f"Repository '{cleared_repo}' and its vector DB cleared successfully.", "type": "repo"})
         if msg == "clear_chat":
             if qa:
                 qa.memory.clear()
-                return jsonify({"response": "Chat history cleared for this repository.", "type": "chat"})
+                return jsonify({"response": "", "type": "chat"})
             return jsonify({"response": "No chat history to clear.", "type": "chat"})
+        if msg in ("new_chat", "clear_repo"):
+            if current_repo_hash:
+                repo_dir = os.path.join(persist_directory, current_repo_hash)
+                if os.path.exists(repo_dir):
+                    shutil.rmtree(repo_dir, onerror=remove_readonly)
+            if current_repo_path and os.path.exists(current_repo_path):
+                shutil.rmtree(current_repo_path, onerror=remove_readonly)
+            qa = None
+            current_repo_hash = None
+            current_repo_path = None
+            return jsonify({"response": "", "type": "repo"})
         if not qa:
             return jsonify({"response": "Vector DB not initialized. Please ingest a repository first.", "type": "error"})
         result = qa(msg)
