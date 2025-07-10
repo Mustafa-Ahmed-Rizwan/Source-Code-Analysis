@@ -92,14 +92,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [FAISS](https://github.com/facebookresearch/faiss) for vector storage.
 - [Tailwind CSS](https://tailwindcss.com/) for styling.
 
-## Future Work & Expansion
-
-While the current version focuses on Python repositories, future enhancements may include:
-
-- **Multi-language Support**: Extend code analysis and ingestion to other popular languages such as JavaScript, Java, Go, and C++.
-- **Advanced Code Understanding**: Integrate deeper static analysis and code summarization features.
-- **Improved Search**: Add cross-repository and semantic search capabilities.
-- **Authentication & User Management**: Support for multiple users and secure access.
-- **Deployment Options**: Dockerization and cloud deployment guides.
-
 Contributions and suggestions for expanding the project are welcome!

@@ -1,32 +1,34 @@
 from flask import render_template, jsonify, request
-from langchain.memory import ConversationSummaryMemory
-from langchain.chains import ConversationalRetrievalChain
-from langchain_groq import ChatGroq
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain_core.prompts import PromptTemplate
-from src.helper import load_embedding, repo_ingestion, load_repo, function_class_chunker, get_repo_hash, remove_readonly
 import os
 import shutil
 import re
+from src.helper import repo_ingestion, load_repo, function_class_chunker, get_repo_hash, remove_readonly
 
-# Global variables need to be defined at module level
+# Global variables
 qa = None
 current_repo_hash = None
-current_repo_path = None  # Add this line
-embeddings = load_embedding()  # Preload embeddings
+current_repo_path = None
+_embeddings = None
+
+def get_embeddings():
+    global _embeddings
+    if _embeddings is None:
+        from langchain_huggingface import HuggingFaceEmbeddings
+        _embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    return _embeddings
 
 def setup_routes(app, persist_directory):
     global qa, current_repo_hash, current_repo_path
 
-    # Setup LLM
-    llm = ChatGroq(
-        model="llama3-70b-8192",
-        temperature=0.5,
-        max_tokens=512,
-        timeout=10,
-        max_retries=2
-    )
+    def load_llm():
+        from langchain_groq import ChatGroq
+        return ChatGroq(
+            model="llama3-70b-8192",
+            temperature=0.5,
+            max_tokens=512,
+            timeout=10,
+            max_retries=2
+        )
 
     # Custom prompt template for code Q&A
     CUSTOM_PROMPT_TEMPLATE = """
@@ -36,7 +38,7 @@ def setup_routes(app, persist_directory):
 - Start with a `## Overview` summarizing the main point.
 - In `## Details`, provide step-by-step explanations, referencing filenames and line numbers if available.
 - When listing items, use Markdown bullet points with a consistent format (e.g., `- Item: Description`).
-- Include relevant code snippets from the context, formatted with triple backticks and the language (e.g., ````python`).
+- Include relevant code snippets from the context, formatted with triple backticks and the language (e.g., ```python).
 - For warnings, errors, or important notes, use blockquotes (`>`) or bold text.
 - If you make any assumptions, list them under an `## Assumptions` section if there are none then output this heading.
 - If the answer is not found in the context, respond with:  
@@ -53,28 +55,31 @@ Question:
 
 Provide the answer in clear, simple language with a professional tone, formatted entirely in Markdown.
     """
-    custom_prompt = PromptTemplate(
-        template=CUSTOM_PROMPT_TEMPLATE,
-        input_variables=["context", "question"]
-    )
 
     def initialize_vector_db(repo_url=None, repo_path=None):
         global qa, current_repo_hash, current_repo_path
+        from langchain.memory import ConversationSummaryMemory
+        from langchain.chains import ConversationalRetrievalChain
+        from langchain_community.vectorstores import FAISS
+        from langchain_core.prompts import PromptTemplate
+
         if qa is not None:
             qa = None
+        llm = load_llm()
         memory = ConversationSummaryMemory(llm=llm, memory_key="chat_history", return_messages=True)
         try:
+            embeddings = get_embeddings()
             if repo_url:
                 repo_hash = get_repo_hash(repo_url)
                 db_path = os.path.join(persist_directory, repo_hash, "faiss_index")
                 current_repo_hash = repo_hash
-                current_repo_path = repo_path  # Save the repo path globally
+                current_repo_path = repo_path
                 if os.path.exists(db_path):
-                    shutil.rmtree(os.path.join(persist_directory, repo_hash))
+                    shutil.rmtree(os.path.join(persist_directory, repo_hash), onerror=remove_readonly)
                 if repo_path:
                     documents = load_repo(repo_path)
                     text_chunks = function_class_chunker(documents)
-                    vectordb = FAISS.from_documents(documents=text_chunks, embedding=embeddings)  # Use preloaded embeddings
+                    vectordb = FAISS.from_documents(documents=text_chunks, embedding=embeddings)
                     os.makedirs(os.path.dirname(db_path), exist_ok=True)
                     vectordb.save_local(db_path)
                 else:
@@ -82,7 +87,7 @@ Provide the answer in clear, simple language with a professional tone, formatted
             elif current_repo_hash:
                 db_path = os.path.join(persist_directory, current_repo_hash, "faiss_index")
                 if os.path.exists(db_path):
-                    vectordb = FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)  # Use preloaded embeddings
+                    vectordb = FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
                 else:
                     return {"status": "error", "message": "No existing vector DB found for current repository."}
             else:
@@ -91,7 +96,10 @@ Provide the answer in clear, simple language with a professional tone, formatted
                 llm,
                 retriever=vectordb.as_retriever(search_type="mmr", search_kwargs={"k": 8}),
                 memory=memory,
-                combine_docs_chain_kwargs={"prompt": custom_prompt}
+                combine_docs_chain_kwargs={"prompt": PromptTemplate(
+                    template=CUSTOM_PROMPT_TEMPLATE,
+                    input_variables=["context", "question"]
+                )}
             )
             return {"status": "success", "message": "Vector DB initialized successfully"}
         except Exception as e:
