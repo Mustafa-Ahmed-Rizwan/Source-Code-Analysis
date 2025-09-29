@@ -29,29 +29,6 @@ A full-stack application that allows users to ingest GitHub repositories and cha
 - **HTTP**: API communication
 - **Flutter Markdown**: Markdown rendering
 
-## Project Structure
-
-```
-repository-chat-app/
-├── backend/
-│   ├── app.py                 # FastAPI main application
-│   ├── src/
-│   │   ├── route_handlers.py  # API route handlers
-│   │   └── helper.py          # Repository processing utilities
-│   ├── requirements.txt       # Python dependencies
-│   ├── .env                   # Environment variables
-│   └── db/                    # Vector database storage
-└── frontend/
-    ├── lib/
-    │   ├── main.dart          # Flutter app entry point
-    │   ├── models/            # Data models
-    │   ├── services/          # API services
-    │   ├── providers/         # State management
-    │   ├── screens/           # App screens
-    │   └── widgets/           # Reusable widgets
-    ├── pubspec.yaml           # Flutter dependencies
-    └── android/               # Android-specific files
-```
 
 ## Setup Instructions
 
@@ -107,7 +84,7 @@ repository-chat-app/
 2. **Navigate to frontend directory**
 
    ```bash
-   cd ../frontend
+   cd repo_chat_app
    ```
 
 3. **Install dependencies**
