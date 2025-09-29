@@ -1,95 +1,216 @@
-# Source Code Analysis
+# Repository Chat Application
 
-## Overview
-This project is a web-based chatbot application designed to ingest GitHub repositories containing Python code and enable users to interact with the codebase through natural language queries. Built using Flask, it leverages LangChain for conversational retrieval, HuggingFace embeddings for semantic understanding, and FAISS for efficient vector storage. The application provides a user-friendly interface to ingest repositories, ask questions about the code, and manage chat history.
+A full-stack application that allows users to ingest GitHub repositories and chat with the codebase using AI. Built with FastAPI backend and Flutter mobile frontend.
 
 ## Features
-- **Repository Ingestion**: Clone and process GitHub repositories into analyzable document chunks.
-- **Code Analysis**: Break down Python code into function and class-level chunks with metadata for detailed querying.
-- **Conversational Interface**: Chat with the codebase using a custom LLM-powered Q&A system.
-- **Memory Management**: Clear repository data or chat history as needed.
-- **Responsive Design**: A clean UI with Tailwind CSS styling for an enhanced user experience.
 
-## Prerequisites
+- 🔗 **Repository Ingestion**: Clone and process GitHub repositories
+- 🤖 **AI-Powered Chat**: Ask questions about code using natural language
+- 📱 **Mobile App**: Cross-platform Flutter application
+- 🔍 **Code Analysis**: Supports Python, C/C++, Java, JavaScript, HTML, CSS files
+- 💬 **Markdown Responses**: Well-formatted answers with code snippets
+- 🗂️ **Multiple File Types**: Intelligent parsing of different programming languages
+
+## Tech Stack
+
+### Backend
+
+- **FastAPI**: Modern Python web framework
+- **LangChain**: AI framework for document processing
+- **FAISS**: Vector database for semantic search
+- **Groq**: LLM API for chat functionality
+- **HuggingFace**: Embeddings model
+- **Git**: Repository cloning
+
+### Frontend
+
+- **Flutter**: Cross-platform mobile development
+- **Provider**: State management
+- **HTTP**: API communication
+- **Flutter Markdown**: Markdown rendering
+
+## Project Structure
+
+```
+repository-chat-app/
+├── backend/
+│   ├── app.py                 # FastAPI main application
+│   ├── src/
+│   │   ├── route_handlers.py  # API route handlers
+│   │   └── helper.py          # Repository processing utilities
+│   ├── requirements.txt       # Python dependencies
+│   ├── .env                   # Environment variables
+│   └── db/                    # Vector database storage
+└── frontend/
+    ├── lib/
+    │   ├── main.dart          # Flutter app entry point
+    │   ├── models/            # Data models
+    │   ├── services/          # API services
+    │   ├── providers/         # State management
+    │   ├── screens/           # App screens
+    │   └── widgets/           # Reusable widgets
+    ├── pubspec.yaml           # Flutter dependencies
+    └── android/               # Android-specific files
+```
+
+## Setup Instructions
+
+### Prerequisites
+
 - Python 3.8+
-- Git (for repository cloning)
-- Required Python packages (listed in `requirements.txt`)
-- GROQ API Key (set as `GROQ_API_KEY` environment variable)
+- Flutter SDK 3.0+
+- Git
+- Android Studio or VS Code
+- uv (Python package manager)
 
-## Installation
+### Backend Setup
 
-1. **Clone the Repository**
+1. **Clone the repository**
+
    ```bash
-   git clone https://github.com/your-username/your-repo.git
-   cd your-repo
+   git clone https://github.com/Mustafa-Ahmed-Rizwan/Source-Code-Analysis.git
    ```
 
-2. **Set Up Environment**
-   - Create a virtual environment and activate it:
-     ```bash
-     python -m venv venv
-     source venv/bin/activate  # On Windows: venv\Scripts\activate
-     ```
-   - Install dependencies:
-     ```bash
-     pip install -r requirements.txt
-     ```
+2. **Create virtual environment with uv**
 
-3. **Configure Environment Variables**
-   - Create a `.env` file in the root directory and add your GROQ API Key:
-     ```
-     GROQ_API_KEY=your_api_key_here
-     ```
+   ```bash
+   uv venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
 
-4. **Initialize the Project**
-   - Run the setup script to create necessary files:
-     ```bash
-     python template.py
-     ```
+3. **Install dependencies**
 
-## Usage
+   ```bash
+   uv pip install -r requirements.txt
+   ```
 
-1. **Run the Application**
+4. **Environment Variables**
+   Create a `.env` file in the backend directory:
+
+   ```env
+   GROQ_API_KEY=your_groq_api_key_here
+   ```
+
+5. **Run the backend**
    ```bash
    python app.py
    ```
-   The app will be available at `http://0.0.0.0:8080`.
+   The API will be available at `http://localhost:8080`
 
-2. **Ingest a Repository**
-   - Enter a GitHub repository URL (e.g., `https://github.com/username/repo`) in the "Ingest GitHub Repository" section and click "Ingest".
-   - Wait for the processing to complete (this may take a moment for large repositories).
+### Frontend Setup
 
-3. **Chat with the Codebase**
-   - Once ingested, use the "Chat with Codebase" section to ask questions about the code.
-   - Click "Send" or press Enter to submit your query.
-   - Use "Clear Chat" to reset the conversation history or "Clear Repo" to remove the current repository data.
+1. **Install Flutter SDK**
 
-## Project Structure
-- `app.py`: Main Flask application entry point.
-- `src/helper.py`: Utility functions for repository ingestion, document loading, and chunking.
-- `src/route_handlers.py`: Defines Flask routes for ingestion and chatting.
-- `index.html`: Frontend template with chat interface.
-- `styles.css`: Custom CSS to complement Tailwind styling.
-- `script.js`: JavaScript for dynamic frontend interactions.
-- `template.py`: Script to initialize project files.
-- `.env`: Environment variable configuration.
-- `.gitignore`: Git ignore file.
-- `README.md`: This file.
-- `requirements.txt`: Project dependencies.
+   - Download from: https://flutter.dev/docs/get-started/install
+   - Add Flutter to your system PATH
+
+2. **Navigate to frontend directory**
+
+   ```bash
+   cd ../frontend
+   ```
+
+3. **Install dependencies**
+
+   ```bash
+   flutter pub get
+   ```
+
+4. **Configure API connection**
+   Edit `lib/services/api_service.dart` and update the `baseUrl`:
+
+   ```dart
+   static const String baseUrl = 'http://YOUR_BACKEND_URL:8080';
+   ```
+
+   **Connection URLs:**
+
+   - Android Emulator: `http://10.0.2.2:8080`
+   - iOS Simulator: `http://localhost:8080`
+   - Physical Device: `http://YOUR_COMPUTER_IP:8080`
+
+5. **Run the Flutter app**
+   ```bash
+   flutter run
+   ```
+
+## Usage Guide
+
+1. **Start the Backend**
+
+   - Activate virtual environment
+   - Run `python app.py`
+
+2. **Launch Mobile App**
+
+   - Connect phone or start emulator
+   - Run `flutter run`
+
+3. **Ingest Repository**
+
+   - Go to "Repository" tab
+   - Enter GitHub URL (e.g., `https://github.com/user/repo`)
+   - Click "Ingest Repository"
+
+4. **Chat with Code**
+   - Switch to "Chat" tab
+   - Ask questions about the codebase
+   - Get AI-powered responses with code examples
+
+## Supported File Types
+
+- **Python**: `.py` files
+- **C/C++**: `.c`, `.cpp`, `.h`, `.hpp` files
+- **Java**: `.java` files
+- **JavaScript**: `.js` files
+- **Web**: `.html`, `.css` files
+
+## Development Notes
+
+### Backend Architecture
+
+- Uses FAISS for vector similarity search
+- Implements function/class-level chunking for better context
+- Supports conversational memory
+- Custom prompt templates for code-specific responses
+
+### Frontend Architecture
+
+- Provider pattern for state management
+- Responsive design for different screen sizes
+- Markdown rendering for formatted responses
+- Error handling with user-friendly messages
+
+## Environment Variables
+
+Create a `.env` file in the backend directory:
+
+```env
+# Required
+GROQ_API_KEY=your_groq_api_key_here
+
+# Optional (with defaults)
+HOST=0.0.0.0
+PORT=8080
+```
+
+## Requirements Files
+
+### Backend Dependencies (requirements.txt)
+
+All Python packages are managed via `uv` and listed in `requirements.txt`.
+
+### Frontend Dependencies (pubspec.yaml)
+
+Flutter packages are defined in `pubspec.yaml` with version constraints.
 
 ## Contributing
-Contributions are welcome! Please fork the repository and submit pull requests with your changes. Ensure to:
-- Follow the existing code style.
-- Add tests or documentation as needed.
-- Open an issue for discussion before making significant changes.
+
+1. Fork the repository
+2. Create a feature branch
+3. Make changes and test thoroughly
+4. Submit a pull request
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
-- [LangChain](https://python.langchain.com/) for conversational AI capabilities.
-- [HuggingFace](https://huggingface.co/) for embeddings.
-- [FAISS](https://github.com/facebookresearch/faiss) for vector storage.
-- [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-Contributions and suggestions for expanding the project are welcome!
+This project is licensed under the MIT License - see the LICENSE file for details.

@@ -1,14 +1,24 @@
-from flask import render_template, jsonify, request
+# src/route_handlers.py
+from fastapi import APIRouter, HTTPException, Form
+from fastapi.responses import JSONResponse, HTMLResponse
 import os
 import shutil
 import re
 from src.helper import repo_ingestion, load_repo, function_class_chunker, get_repo_hash, remove_readonly
+from pydantic import BaseModel
+from typing import Optional
 
 # Global variables
 qa = None
 current_repo_hash = None
 current_repo_path = None
 _embeddings = None
+
+class ChatRequest(BaseModel):
+    msg: str
+
+class RepoRequest(BaseModel):
+    question: str
 
 def get_embeddings():
     global _embeddings
@@ -105,15 +115,31 @@ Provide the answer in clear, simple language with a professional tone, formatted
         except Exception as e:
             return {"status": "error", "message": f"Failed to initialize Vector DB: {str(e)}"}
 
-    @app.route('/', methods=["GET", "POST"])
-    def index():
-        return render_template('index.html')
+    # Create API router
+    router = APIRouter()
 
-    @app.route('/chatbot', methods=["POST"])
-    def gitRepo():
+    @router.get("/", response_class=HTMLResponse)
+    async def index():
+        # Simple HTML response for testing
+        return """
+        <html>
+            <head>
+                <title>Repository Chat API</title>
+            </head>
+            <body>
+                <h1>Repository Chat API</h1>
+                <p>FastAPI backend is running!</p>
+                <p>Use the mobile app to interact with this API.</p>
+            </body>
+        </html>
+        """
+
+    @router.post("/api/repository")
+    async def ingest_repository(request: RepoRequest):
         global qa, current_repo_hash
-        user_input = request.form['question']
+        user_input = request.question
         repo_result = repo_ingestion(user_input)
+        
         if repo_result["status"] == "error":
             if "Repository already exists" in repo_result["message"]:
                 match = re.search(r"at (.+)", repo_result["message"])
@@ -124,21 +150,24 @@ Provide the answer in clear, simple language with a professional tone, formatted
                     if os.path.exists(old_db_path):
                         shutil.rmtree(os.path.join(persist_directory, repo_hash), onerror=remove_readonly)
                     init_result = initialize_vector_db(repo_url=user_input, repo_path=repo_path)
-                    return jsonify({"response": init_result["message"] if init_result["status"] == "success" else repo_result["message"]})
-                return jsonify({"response": "Could not determine repository path. Please ingest a new repository."})
-            return jsonify({"response": repo_result["message"]})
+                    return {"response": init_result["message"] if init_result["status"] == "success" else repo_result["message"]}
+                return {"response": "Could not determine repository path. Please ingest a new repository."}
+            return {"response": repo_result["message"]}
+        
         init_result = initialize_vector_db(repo_url=user_input, repo_path=repo_result["repo_path"])
-        return jsonify({"response": init_result["message"]})
+        return {"response": init_result["message"]}
 
-    @app.route("/get", methods=["POST"])
-    def chat():
+    @router.post("/api/chat")
+    async def chat(request: ChatRequest):
         global qa, current_repo_hash, current_repo_path
-        msg = request.form["msg"]
+        msg = request.msg
+        
         if msg == "clear_chat":
             if qa:
                 qa.memory.clear()
-                return jsonify({"response": "", "type": "chat"})
-            return jsonify({"response": "No chat history to clear.", "type": "chat"})
+                return {"response": "", "type": "chat"}
+            return {"response": "No chat history to clear.", "type": "chat"}
+        
         if msg in ("new_chat", "clear_repo"):
             if current_repo_hash:
                 repo_dir = os.path.join(persist_directory, current_repo_hash)
@@ -149,8 +178,20 @@ Provide the answer in clear, simple language with a professional tone, formatted
             qa = None
             current_repo_hash = None
             current_repo_path = None
-            return jsonify({"response": "", "type": "repo"})
+            return {"response": "", "type": "repo"}
+        
         if not qa:
-            return jsonify({"response": "Vector DB not initialized. Please ingest a repository first.", "type": "error"})
-        result = qa(msg)
-        return jsonify({"response": result["answer"], "type": "answer"})
+            return {"response": "Vector DB not initialized. Please ingest a repository first.", "type": "error"}
+        
+        try:
+            result = qa(msg)
+            return {"response": result["answer"], "type": "answer"}
+        except Exception as e:
+            return {"response": f"Error processing chat: {str(e)}", "type": "error"}
+
+    @router.get("/api/health")
+    async def health_check():
+        return {"status": "healthy", "message": "API is running"}
+
+    # Include router in the app
+    app.include_router(router)
